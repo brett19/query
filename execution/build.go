@@ -373,8 +373,7 @@ func (this *builder) VisitBuildIndexes(plan *plan.BuildIndexes) (interface{}, er
 
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
-	panic("Unexpected VisitPrepare")
-	return nil, nil
+	return NewPrepare(plan.Prepared()), nil
 }
 
 // Explain
