@@ -179,17 +179,17 @@ func (this *httpRequest) writeResults() bool {
 	return false
 }
 
-var marshalBytePool sync.Pool = sync.Pool{
+var marshalBytesPool sync.Pool = sync.Pool{
 	New: func() interface{} {
 		return bytes.NewBuffer(make([]byte, 0, 512))
 	},
 }
 func marshalBytePoolGet() *bytes.Buffer {
-	return marshalBytePool.Get().(*bytes.Buffer)
+	return marshalBytesPool.Get().(*bytes.Buffer)
 }
 func marshalBytePoolPut(buf *bytes.Buffer) {
 	buf.Reset()
-	marshalBytePool.Put(buf)
+	marshalBytesPool.Put(buf)
 }
 
 func (this *httpRequest) writeResult(item value.Value) bool {
@@ -225,8 +225,8 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 }
 
 func (this *httpRequest) writeValue(item value.Value) bool {
-	bytes := marshalBytePool.Get().(*bytes.Buffer)
-	defer marshalBytePool.Put(bytes)
+	bytes := marshalBytePoolGet()
+	defer marshalBytePoolPut(bytes)
 
 	err := json.FastMarshal(bytes, item)
 	if err != nil {
