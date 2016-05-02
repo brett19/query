@@ -184,12 +184,19 @@ var marshalBytePool sync.Pool = sync.Pool{
 		return bytes.NewBuffer(make([]byte, 0, 512))
 	},
 }
+func marshalBytePoolGet() *bytes.Buffer {
+	return marshalBytePool.Get().(*bytes.Buffer)
+}
+func marshalBytePoolPut(buf *bytes.Buffer) {
+	buf.Reset()
+	marshalBytePool.Put(buf)
+}
 
 func (this *httpRequest) writeResult(item value.Value) bool {
 	var success bool
 
-	bytes := marshalBytePool.Get().(*bytes.Buffer)
-	defer marshalBytePool.Put(bytes)
+	bytes := marshalBytePoolGet()
+	defer marshalBytePoolPut(bytes)
 
 	err := json.FastMarshal(bytes, item)
 	if err != nil {
