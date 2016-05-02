@@ -20,8 +20,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -221,50 +219,8 @@ func (this *Context) Warning(wrn errors.Error) {
 }
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
-	subresults := this.getSubresults()
-	subresult, ok := subresults.get(query)
-	if ok {
-		return subresult.(value.Value), nil
-	}
-
-	subplans := this.getSubplans()
-	subplan, planFound := subplans.get(query)
-
-	if !planFound {
-		var err error
-		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true)
-		if err != nil {
-			return nil, err
-		}
-
-		// Cache plan
-		subplans.set(query, subplan)
-	}
-
-	pipeline, err := Build(subplan.(plan.Operator), this)
-	if err != nil {
-		return nil, err
-	}
-
-	// Collect subquery results
-	collect := NewCollect()
-	sequence := NewSequence(pipeline, collect)
-	sequence.RunOnce(this, parent)
-
-	// Await completion
-	ok = true
-	for ok {
-		_, ok = <-collect.Output().ItemChannel()
-	}
-
-	results := collect.ValuesOnce()
-
-	// Cache results
-	if !planFound && !query.IsCorrelated() {
-		subresults.set(query, results)
-	}
-
-	return results, nil
+	panic("Evalute Subquery")
+	return nil, nil
 }
 
 func (this *Context) getSubplans() *subqueryMap {

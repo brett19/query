@@ -46,7 +46,7 @@ func (this *Limit) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
+func (this *Limit) BeforeItems(context *Context, parent value.Value) bool {
 	val, e := this.plan.Expression().Evaluate(parent, context)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "LIMIT"))
@@ -67,10 +67,10 @@ func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 	return false
 }
 
-func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *Limit) Item(item value.AnnotatedValue, context *Context) bool {
 	if this.limit > 0 {
 		this.limit--
-		return this.sendItem(item)
+		return this.sendItem(item, context)
 	} else {
 		return false
 	}

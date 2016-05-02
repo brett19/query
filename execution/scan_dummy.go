@@ -37,13 +37,9 @@ func (this *DummyScan) Copy() Operator {
 }
 
 func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
-	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+	defer context.Recover()       // Recover from any panic
 
-		cv := value.NewScopeValue(nil, parent)
-		av := value.NewAnnotatedValue(cv)
-		this.sendItem(av)
-	})
+	cv := value.NewScopeValue(nil, parent)
+	av := value.NewAnnotatedValue(cv)
+	this.sendItem(av, context)
 }

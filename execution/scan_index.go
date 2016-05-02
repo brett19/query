@@ -12,7 +12,6 @@ package execution
 import (
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -24,13 +23,14 @@ import (
 type IndexScan struct {
 	base
 	plan         *plan.IndexScan
-	childChannel StopChannel
+	outChannel   chan value.AnnotatedValue
 }
 
 func NewIndexScan(plan *plan.IndexScan) *IndexScan {
 	rv := &IndexScan{
 		base: newBase(),
 		plan: plan,
+		outChannel:   make(chan value.AnnotatedValue, 40),
 	}
 
 	rv.output = rv
@@ -48,62 +48,65 @@ func (this *IndexScan) Copy() Operator {
 	}
 }
 
-func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
-	this.once.Do(func() {
-		context.AddPhaseOperator(INDEX_SCAN)
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
-
-		spans := this.plan.Spans()
-		n := len(spans)
-		this.childChannel = make(StopChannel, n)
-		children := _INDEX_SCAN_POOL.Get()
-		defer _INDEX_SCAN_POOL.Put(children)
-
-		for i, span := range spans {
-			children = append(children, newSpanScan(this, span))
-			go children[i].RunOnce(context, parent)
-		}
-
-		for n > 0 {
-			select {
-			case <-this.stopChannel:
-				this.notifyStop()
-				notifyChildren(children...)
-			default:
-			}
-
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for all children
-				n--
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(children...)
-			}
-		}
-	})
+func (this *IndexScan) Item(item value.AnnotatedValue, context *Context) bool {
+	this.outChannel <- item
+	return true
 }
 
-func (this *IndexScan) ChildChannel() StopChannel {
-	return this.childChannel
+func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
+	context.AddPhaseOperator(INDEX_SCAN)
+	defer context.Recover()
+
+	spans := this.plan.Spans()
+	n := len(spans)
+
+	children := _INDEX_SCAN_POOL.Get()
+	defer _INDEX_SCAN_POOL.Put(children)
+
+	doneCh := make(chan bool)
+
+	for _, span := range spans {
+		span := span
+		go func() {
+			execSpan := newSpanScan(this, span)
+			execSpan.SetOutput(this)
+			execSpan.RunOnce(context, parent)
+			doneCh <- true
+		}()
+	}
+
+	go func() {
+		for i := 0; i < n; i++ {
+			<- doneCh
+		}
+		close(this.outChannel)
+	}()
+
+	Loop:
+	for {
+		item, ok := <-this.outChannel
+		if !ok {
+			break Loop
+		}
+		this.sendItem(item, context)
+	}
 }
 
 type spanScan struct {
 	base
+	parent *IndexScan
 	plan *plan.IndexScan
 	span *plan.Span
 }
 
 func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
 	rv := &spanScan{
-		base: newRedirectBase(),
+		base: newBase(),
+		parent: parent,
 		plan: parent.plan,
 		span: span,
 	}
 
-	rv.parent = parent
 	rv.output = parent.output
 	return rv
 }
@@ -113,88 +116,71 @@ func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *spanScan) Copy() Operator {
-	return &spanScan{this.base.copy(), this.plan, this.span}
+	return &spanScan{
+		base: this.base.copy(),
+		parent: this.parent,
+		plan: this.plan,
+		span: this.span,
+	}
 }
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
-	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+	defer context.Recover()
 
-		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
+	conn := datastore.NewIndexConnection(context)
+	defer notifyConn(conn.StopChannel())
 
-		timer := time.Now()
-		addTime := func() {
+	go this.scan(context, conn)
 
-			t := time.Since(timer) - this.chanTime
-			context.AddPhaseTime("scan", t)
-			this.plan.AddTime(t)
+	var entry *datastore.IndexEntry
+	ok := true
+	var docs uint64 = 0
+
+	var countDocs = func() {
+		if docs > 0 {
+			context.AddPhaseCount(INDEX_SCAN, docs)
 		}
-		defer addTime()
+	}
+	defer countDocs()
 
-		go this.scan(context, conn)
+	for ok {
+		select {
+		case entry, ok = <-conn.EntryChannel():
+			if ok {
+				cv := value.NewScopeValue(make(map[string]interface{}), parent)
+				av := value.NewAnnotatedValue(cv)
 
-		var entry *datastore.IndexEntry
-		ok := true
-		var docs uint64 = 0
+				// For downstream Fetch
+				meta := map[string]interface{}{"id": entry.PrimaryKey}
+				av.SetAttachment("meta", meta)
 
-		var countDocs = func() {
-			if docs > 0 {
-				context.AddPhaseCount(INDEX_SCAN, docs)
-			}
-		}
-		defer countDocs()
-
-		for ok {
-			select {
-			case <-this.stopChannel:
-				return
-			default:
-			}
-
-			select {
-			case entry, ok = <-conn.EntryChannel():
-				if ok {
-					cv := value.NewScopeValue(make(map[string]interface{}), parent)
-					av := value.NewAnnotatedValue(cv)
-
-					// For downstream Fetch
-					meta := map[string]interface{}{"id": entry.PrimaryKey}
-					av.SetAttachment("meta", meta)
-
-					covers := this.plan.Covers()
-					if len(covers) > 0 {
-						for c, v := range this.plan.FilterCovers() {
-							av.SetCover(c.Text(), v)
-						}
-
-						// Matches planner.builder.buildCoveringScan()
-						for i, ek := range entry.EntryKey {
-							av.SetCover(covers[i].Text(), ek)
-						}
-
-						// Matches planner.builder.buildCoveringScan()
-						av.SetCover(covers[len(entry.EntryKey)].Text(),
-							value.NewValue(entry.PrimaryKey))
-
-						av.SetField(this.plan.Term().Alias(), av)
+				covers := this.plan.Covers()
+				if len(covers) > 0 {
+					for c, v := range this.plan.FilterCovers() {
+						av.SetCover(c.Text(), v)
 					}
 
-					ok = this.sendItem(av)
-					docs++
-					if docs > _PHASE_UPDATE_COUNT {
-						context.AddPhaseCount(INDEX_SCAN, docs)
-						docs = 0
+					// Matches planner.builder.buildCoveringScan()
+					for i, ek := range entry.EntryKey {
+						av.SetCover(covers[i].Text(), ek)
 					}
+
+					// Matches planner.builder.buildCoveringScan()
+					av.SetCover(covers[len(entry.EntryKey)].Text(),
+						value.NewValue(entry.PrimaryKey))
+
+					av.SetField(this.plan.Term().Alias(), av)
 				}
 
-			case <-this.stopChannel:
-				return
+				ok = this.sendItem(av, context)
+				docs++
+				if docs > _PHASE_UPDATE_COUNT {
+					context.AddPhaseCount(INDEX_SCAN, docs)
+					docs = 0
+				}
 			}
 		}
-	})
+	}
 }
 
 func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {

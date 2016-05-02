@@ -10,9 +10,6 @@
 package execution
 
 import (
-	"time"
-
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -21,7 +18,6 @@ type Authorize struct {
 	base
 	plan         *plan.Authorize
 	child        Operator
-	childChannel StopChannel
 }
 
 func NewAuthorize(plan *plan.Authorize, child Operator) *Authorize {
@@ -29,7 +25,6 @@ func NewAuthorize(plan *plan.Authorize, child Operator) *Authorize {
 		base:         newBase(),
 		plan:         plan,
 		child:        child,
-		childChannel: make(StopChannel, 1),
 	}
 
 	rv.output = rv
@@ -45,51 +40,15 @@ func (this *Authorize) Copy() Operator {
 		base:         this.base.copy(),
 		plan:         this.plan,
 		child:        this.child.Copy(),
-		childChannel: make(StopChannel, 1),
 	}
 }
 
 func (this *Authorize) RunOnce(context *Context, parent value.Value) {
-	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
-
-		timer := time.Now()
-
-		ds := datastore.GetDatastore()
-		if ds != nil {
-			err := ds.Authorize(this.plan.Privileges(), context.Credentials())
-			if err != nil {
-				context.Fatal(err)
-				return
-			}
-		}
-
-		t := time.Since(timer)
-		context.AddPhaseTime("authorize", t)
-		this.plan.AddTime(t)
-
-		this.child.SetInput(this.input)
-		this.child.SetOutput(this.output)
-		this.child.SetStop(nil)
-		this.child.SetParent(this)
-
-		go this.child.RunOnce(context, parent)
-
-		for {
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for child
-				return
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(this.child)
-			}
-		}
-	})
+	this.child.SetInput(this.input)
+	this.child.SetOutput(this)
+	this.child.RunOnce(context, parent)
 }
 
-func (this *Authorize) ChildChannel() StopChannel {
-	return this.childChannel
+func (this *Authorize) Item(item value.AnnotatedValue, context *Context) bool {
+	return this.output.Item(item, context)
 }

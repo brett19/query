@@ -56,48 +56,32 @@ type builder struct {
 
 // Scan
 func (this *builder) VisitPrimaryScan(plan *plan.PrimaryScan) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspace := plan.Keyspace()
-		scannedIndex := scannedIndex{keyspace.NamespaceId(), keyspace.Name()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
-	return NewPrimaryScan(plan), nil
+	panic("Unexpected VisitPrimaryScan")
+	return nil, nil
 }
 
 func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
-	return NewParentScan(), nil
+	panic("Unexpected VisitParentScan")
+	return nil, nil
 }
 
 func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
 	return NewIndexScan(plan), nil
 }
 
 func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}, error) {
-	// Remember the bucket of the scanned index.
-	if this.scannedIndexes != nil {
-		keyspaceTerm := plan.Term()
-		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
-		this.scannedIndexes[scannedIndex] = true
-	}
-
-	return NewIndexCountScan(plan), nil
+	panic("Unexpected VisitIndexCountScan")
+	return nil, nil
 }
 
 func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
-	return NewKeyScan(plan), nil
+	panic("Unexpected VisitKeyScan")
+	return nil, nil
 }
 
 func (this *builder) VisitValueScan(plan *plan.ValueScan) (interface{}, error) {
-	return NewValueScan(plan), nil
+	panic("Unexpected VisitValueScan")
+	return nil, nil
 }
 
 func (this *builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
@@ -105,82 +89,67 @@ func (this *builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
 }
 
 func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
-	return NewCountScan(plan), nil
+	panic("Unexpected VisitCountScan")
+	return nil, nil
 }
 
 func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
-	scans := _INDEX_SCAN_POOL.Get()
-
-	for _, p := range plan.Scans() {
-		s, e := p.Accept(this)
-		if e != nil {
-			return nil, e
-		}
-
-		scans = append(scans, s.(Operator))
-	}
-
-	return NewIntersectScan(scans), nil
+	panic("Unexpected VisitIntersectScan")
+	return nil, nil
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
-	scans := _INDEX_SCAN_POOL.Get()
-
-	for _, p := range plan.Scans() {
-		s, e := p.Accept(this)
-		if e != nil {
-			return nil, e
-		}
-
-		scans = append(scans, s.(Operator))
-	}
-
-	return NewUnionScan(scans), nil
+	panic("Unexpected VisitUnionScan")
+	return nil, nil
 }
 
 func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {
-	scan, err := plan.Scan().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewDistinctScan(scan.(Operator)), nil
+	panic("Unexpected VisitDistinctScan")
+	return nil, nil
 }
 
 // Fetch
 func (this *builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
-	return NewFetch(plan), nil
+	panic("Unexpected VisitFetch")
+	return nil, nil
 }
 
 // DummyFetch
 func (this *builder) VisitDummyFetch(plan *plan.DummyFetch) (interface{}, error) {
-	return NewDummyFetch(plan), nil
+	panic("Unexpected VisitDummyFetch")
+	return nil, nil
 }
 
 // Join
 func (this *builder) VisitJoin(plan *plan.Join) (interface{}, error) {
-	return NewJoin(plan), nil
+	panic("Unexpected VisitJoin")
+	return nil, nil
 }
 
 func (this *builder) VisitIndexJoin(plan *plan.IndexJoin) (interface{}, error) {
-	return NewIndexJoin(plan), nil
+	panic("Unexpected VisitIndexJoin")
+	return nil, nil
 }
 
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
-	return NewNest(plan), nil
+	panic("Unexpected VisitNest")
+	return nil, nil
 }
 
 func (this *builder) VisitIndexNest(plan *plan.IndexNest) (interface{}, error) {
-	return NewIndexNest(plan), nil
+	panic("Unexpected VisitIndexNest")
+	return nil, nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {
-	return NewUnnest(plan), nil
+	panic("Unexpected VisitUnnest")
+	return nil, nil
 }
 
 // Let + Letting
 func (this *builder) VisitLet(plan *plan.Let) (interface{}, error) {
-	return NewLet(plan), nil
+	panic("Unexpected VisitLet")
+	return nil, nil
 }
 
 // Filter
@@ -190,15 +159,18 @@ func (this *builder) VisitFilter(plan *plan.Filter) (interface{}, error) {
 
 // Group
 func (this *builder) VisitInitialGroup(plan *plan.InitialGroup) (interface{}, error) {
-	return NewInitialGroup(plan), nil
+	panic("Unexpected VisitInitialGroup")
+	return nil, nil
 }
 
 func (this *builder) VisitIntermediateGroup(plan *plan.IntermediateGroup) (interface{}, error) {
-	return NewIntermediateGroup(plan), nil
+	panic("Unexpected VisitIntermediateGroup")
+	return nil, nil
 }
 
 func (this *builder) VisitFinalGroup(plan *plan.FinalGroup) (interface{}, error) {
-	return NewFinalGroup(plan), nil
+	panic("Unexpected VisitFinalGroup")
+	return nil, nil
 }
 
 // Project
@@ -211,70 +183,42 @@ func (this *builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, er
 }
 
 func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (interface{}, error) {
-	return NewIndexCountProject(plan), nil
+	panic("Unexpected VisitIndexCountProject")
+	return nil, nil
 }
 
 // Distinct
 func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
-	return NewDistinct(plan, false), nil
+	panic("Unexpected VisitDistinct")
+	return nil, nil
 }
 
 // Set operators
 func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
-	children := _UNION_POOL.Get()
-
-	for _, child := range plan.Children() {
-		c, e := child.Accept(this)
-		if e != nil {
-			return nil, e
-		}
-
-		children = append(children, c.(Operator))
-	}
-
-	return NewUnionAll(children...), nil
+	panic("Unexpected VisitUnionAll")
+	return nil, nil
 }
 
 func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, error) {
-	first, e := plan.First().Accept(this)
-	if e != nil {
-		return nil, e
-	}
-
-	second, e := plan.Second().Accept(this)
-	if e != nil {
-		return nil, e
-	}
-
-	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+	panic("Unexpected VisitIntersectAll")
+	return nil, nil
 }
 
 func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
-	first, e := plan.First().Accept(this)
-	if e != nil {
-		return nil, e
-	}
-
-	second, e := plan.Second().Accept(this)
-	if e != nil {
-		return nil, e
-	}
-
-	return NewExceptAll(first.(Operator), second.(Operator)), nil
+	panic("Unexpected VisitExceptAll")
+	return nil, nil
 }
 
 // Order
 func (this *builder) VisitOrder(plan *plan.Order) (interface{}, error) {
-	if plan.LimitPushed() {
-		return NewOrderLimit(plan), nil
-	} else {
-		return NewOrder(plan), nil
-	}
+	panic("Unexpected VisitOrder")
+	return nil, nil
 }
 
 // Offset
 func (this *builder) VisitOffset(plan *plan.Offset) (interface{}, error) {
-	return NewOffset(plan), nil
+	panic("Unexpected VisitOffset")
+	return nil, nil
 }
 
 func (this *builder) VisitLimit(plan *plan.Limit) (interface{}, error) {
@@ -283,70 +227,53 @@ func (this *builder) VisitLimit(plan *plan.Limit) (interface{}, error) {
 
 // Insert
 func (this *builder) VisitSendInsert(plan *plan.SendInsert) (interface{}, error) {
-	return NewSendInsert(plan), nil
+	panic("Unexpected VisitSendInsert")
+	return nil, nil
 }
 
 // Upsert
 func (this *builder) VisitSendUpsert(plan *plan.SendUpsert) (interface{}, error) {
-	return NewSendUpsert(plan), nil
+	panic("Unexpected VisitSendUpsert")
+	return nil, nil
 }
 
 // Delete
 func (this *builder) VisitSendDelete(plan *plan.SendDelete) (interface{}, error) {
-	return NewSendDelete(plan), nil
+	panic("Unexpected VisitSendDelete")
+	return nil, nil
 }
 
 // Update
 func (this *builder) VisitClone(plan *plan.Clone) (interface{}, error) {
-	return NewClone(plan), nil
+	panic("Unexpected VisitClone")
+	return nil, nil
 }
 
 func (this *builder) VisitSet(plan *plan.Set) (interface{}, error) {
-	return NewSet(plan), nil
+	panic("Unexpected VisitSet")
+	return nil, nil
 }
 
 func (this *builder) VisitUnset(plan *plan.Unset) (interface{}, error) {
-	return NewUnset(plan), nil
+	panic("Unexpected VisitUnset")
+	return nil, nil
 }
 
 func (this *builder) VisitSendUpdate(plan *plan.SendUpdate) (interface{}, error) {
-	return NewSendUpdate(plan), nil
+	panic("Unexpected VisitSendUpdate")
+	return nil, nil
 }
 
 // Merge
 func (this *builder) VisitMerge(plan *plan.Merge) (interface{}, error) {
-	var update, delete, insert Operator
-
-	if plan.Update() != nil {
-		op, e := plan.Update().Accept(this)
-		if e != nil {
-			return nil, e
-		}
-		update = op.(Operator)
-	}
-
-	if plan.Delete() != nil {
-		op, e := plan.Delete().Accept(this)
-		if e != nil {
-			return nil, e
-		}
-		delete = op.(Operator)
-	}
-
-	if plan.Insert() != nil {
-		op, e := plan.Insert().Accept(this)
-		if e != nil {
-			return nil, e
-		}
-		insert = op.(Operator)
-	}
-
-	return NewMerge(plan, update, delete, insert), nil
+	panic("Unexpected VisitMerge")
+	return nil, nil
 }
 
 // Alias
 func (this *builder) VisitAlias(plan *plan.Alias) (interface{}, error) {
-	return NewAlias(plan), nil
+	panic("Unexpected VisitAlias")
+	return nil, nil
 }
 
 // Authorize
@@ -393,7 +320,8 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 
 // Discard
 func (this *builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
-	return NewDiscard(), nil
+	panic("Unexpected VisitDiscard")
+	return nil, nil
 }
 
 // Stream
@@ -403,50 +331,60 @@ func (this *builder) VisitStream(plan *plan.Stream) (interface{}, error) {
 
 // Collect
 func (this *builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
-	return NewCollect(), nil
+	panic("Unexpected VisitCollect")
+	return nil, nil
 }
 
 // Channel
 func (this *builder) VisitChannel(plan *plan.Channel) (interface{}, error) {
-	return NewChannel(), nil
+	panic("Unexpected VisitChannel")
+	return nil, nil
 }
 
 // CreateIndex
 func (this *builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (interface{}, error) {
-	return NewCreatePrimaryIndex(plan), nil
+	panic("Unexpected VisitCreatePrimaryIndex")
+	return nil, nil
 }
 
 // CreateIndex
 func (this *builder) VisitCreateIndex(plan *plan.CreateIndex) (interface{}, error) {
-	return NewCreateIndex(plan), nil
+	panic("Unexpected VisitCreateIndex")
+	return nil, nil
 }
 
 // DropIndex
 func (this *builder) VisitDropIndex(plan *plan.DropIndex) (interface{}, error) {
-	return NewDropIndex(plan), nil
+	panic("Unexpected VisitDropIndex")
+	return nil, nil
 }
 
 // AlterIndex
 func (this *builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error) {
-	return NewAlterIndex(plan), nil
+	panic("Unexpected VisitAlterIndex")
+	return nil, nil
 }
 
 // BuildIndexes
 func (this *builder) VisitBuildIndexes(plan *plan.BuildIndexes) (interface{}, error) {
-	return NewBuildIndexes(plan), nil
+	panic("Unexpected VisitBuildIndexes")
+	return nil, nil
 }
 
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
-	return NewPrepare(plan.Prepared()), nil
+	panic("Unexpected VisitPrepare")
+	return nil, nil
 }
 
 // Explain
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
-	return NewExplain(plan), nil
+	panic("Unexpected VisitExplain")
+	return nil, nil
 }
 
 // Infer
 func (this *builder) VisitInferKeyspace(plan *plan.InferKeyspace) (interface{}, error) {
-	return NewInferKeyspace(plan), nil
+	panic("Unexpected VisitInferKeyspace")
+	return nil, nil
 }

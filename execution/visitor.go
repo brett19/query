@@ -11,101 +11,101 @@ package execution
 
 type Visitor interface {
 	// Scan
-	VisitPrimaryScan(op *PrimaryScan) (interface{}, error)
-	VisitParentScan(op *ParentScan) (interface{}, error)
+	//VisitPrimaryScan(op *PrimaryScan) (interface{}, error)
+	//VisitParentScan(op *ParentScan) (interface{}, error)
 	VisitIndexScan(op *IndexScan) (interface{}, error)
-	VisitKeyScan(op *KeyScan) (interface{}, error)
-	VisitValueScan(op *ValueScan) (interface{}, error)
+	//VisitKeyScan(op *KeyScan) (interface{}, error)
+	//VisitValueScan(op *ValueScan) (interface{}, error)
 	VisitDummyScan(op *DummyScan) (interface{}, error)
-	VisitCountScan(op *CountScan) (interface{}, error)
-	VisitIndexCountScan(op *IndexCountScan) (interface{}, error)
-	VisitIntersectScan(op *IntersectScan) (interface{}, error)
-	VisitUnionScan(op *UnionScan) (interface{}, error)
-	VisitDistinctScan(op *DistinctScan) (interface{}, error)
+	//VisitCountScan(op *CountScan) (interface{}, error)
+	//VisitIndexCountScan(op *IndexCountScan) (interface{}, error)
+	//VisitIntersectScan(op *IntersectScan) (interface{}, error)
+	//VisitUnionScan(op *UnionScan) (interface{}, error)
+	//VisitDistinctScan(op *DistinctScan) (interface{}, error)
 
 	// Fetch
-	VisitFetch(op *Fetch) (interface{}, error)
-	VisitDummyFetch(op *DummyFetch) (interface{}, error)
+	//VisitFetch(op *Fetch) (interface{}, error)
+	//VisitDummyFetch(op *DummyFetch) (interface{}, error)
 
 	// Join
-	VisitJoin(op *Join) (interface{}, error)
-	VisitIndexJoin(op *IndexJoin) (interface{}, error)
-	VisitNest(op *Nest) (interface{}, error)
-	VisitIndexNest(op *IndexNest) (interface{}, error)
-	VisitUnnest(op *Unnest) (interface{}, error)
+	//VisitJoin(op *Join) (interface{}, error)
+	//VisitIndexJoin(op *IndexJoin) (interface{}, error)
+	//VisitNest(op *Nest) (interface{}, error)
+	//VisitIndexNest(op *IndexNest) (interface{}, error)
+	//VisitUnnest(op *Unnest) (interface{}, error)
 
 	// Let + Letting
-	VisitLet(op *Let) (interface{}, error)
+	//VisitLet(op *Let) (interface{}, error)
 
 	// Filter
 	VisitFilter(op *Filter) (interface{}, error)
 
 	// Group
-	VisitInitialGroup(op *InitialGroup) (interface{}, error)
-	VisitIntermediateGroup(op *IntermediateGroup) (interface{}, error)
-	VisitFinalGroup(op *FinalGroup) (interface{}, error)
+	//VisitInitialGroup(op *InitialGroup) (interface{}, error)
+	//VisitIntermediateGroup(op *IntermediateGroup) (interface{}, error)
+	//VisitFinalGroup(op *FinalGroup) (interface{}, error)
 
 	// Project
 	VisitInitialProject(op *InitialProject) (interface{}, error)
 	VisitFinalProject(op *FinalProject) (interface{}, error)
-	VisitIndexCountProject(op *IndexCountProject) (interface{}, error)
+	//VisitIndexCountProject(op *IndexCountProject) (interface{}, error)
 
 	// Distinct
-	VisitDistinct(op *Distinct) (interface{}, error)
+	//VisitDistinct(op *Distinct) (interface{}, error)
 
 	// Set operators
-	VisitUnionAll(op *UnionAll) (interface{}, error)
-	VisitIntersectAll(op *IntersectAll) (interface{}, error)
-	VisitExceptAll(op *ExceptAll) (interface{}, error)
+	//VisitUnionAll(op *UnionAll) (interface{}, error)
+	//VisitIntersectAll(op *IntersectAll) (interface{}, error)
+	//VisitExceptAll(op *ExceptAll) (interface{}, error)
 
 	// Order
-	VisitOrder(op *Order) (interface{}, error)
+	//VisitOrder(op *Order) (interface{}, error)
 
 	// Offset
-	VisitOffset(op *Offset) (interface{}, error)
+	//VisitOffset(op *Offset) (interface{}, error)
 	VisitLimit(op *Limit) (interface{}, error)
 
 	// Insert
-	VisitSendInsert(op *SendInsert) (interface{}, error)
+	//VisitSendInsert(op *SendInsert) (interface{}, error)
 
 	// Insert
-	VisitSendUpsert(op *SendUpsert) (interface{}, error)
+	//VisitSendUpsert(op *SendUpsert) (interface{}, error)
 
 	// Delete
-	VisitSendDelete(op *SendDelete) (interface{}, error)
+	//VisitSendDelete(op *SendDelete) (interface{}, error)
 
 	// Update
-	VisitClone(op *Clone) (interface{}, error)
-	VisitSet(op *Set) (interface{}, error)
-	VisitUnset(op *Unset) (interface{}, error)
-	VisitSendUpdate(op *SendUpdate) (interface{}, error)
+	//VisitClone(op *Clone) (interface{}, error)
+	//VisitSet(op *Set) (interface{}, error)
+	//VisitUnset(op *Unset) (interface{}, error)
+	//VisitSendUpdate(op *SendUpdate) (interface{}, error)
 
 	// Merge
-	VisitMerge(op *Merge) (interface{}, error)
+	//VisitMerge(op *Merge) (interface{}, error)
 
 	// Framework
-	VisitAlias(op *Alias) (interface{}, error)
+	//VisitAlias(op *Alias) (interface{}, error)
 	VisitAuthorize(op *Authorize) (interface{}, error)
 	VisitParallel(op *Parallel) (interface{}, error)
 	VisitSequence(op *Sequence) (interface{}, error)
-	VisitDiscard(op *Discard) (interface{}, error)
+	//VisitDiscard(op *Discard) (interface{}, error)
 	VisitStream(op *Stream) (interface{}, error)
-	VisitCollect(op *Collect) (interface{}, error)
-	VisitChannel(op *Channel) (interface{}, error)
+	//VisitCollect(op *Collect) (interface{}, error)
+	//VisitChannel(op *Channel) (interface{}, error)
 
 	// Index DDL
-	VisitCreatePrimaryIndex(op *CreatePrimaryIndex) (interface{}, error)
-	VisitCreateIndex(op *CreateIndex) (interface{}, error)
-	VisitDropIndex(op *DropIndex) (interface{}, error)
-	VisitAlterIndex(op *AlterIndex) (interface{}, error)
-	VisitBuildIndexes(op *BuildIndexes) (interface{}, error)
+	//VisitCreatePrimaryIndex(op *CreatePrimaryIndex) (interface{}, error)
+	//VisitCreateIndex(op *CreateIndex) (interface{}, error)
+	//VisitDropIndex(op *DropIndex) (interface{}, error)
+	//VisitAlterIndex(op *AlterIndex) (interface{}, error)
+	//VisitBuildIndexes(op *BuildIndexes) (interface{}, error)
 
 	// Explain
-	VisitExplain(op *Explain) (interface{}, error)
+	//VisitExplain(op *Explain) (interface{}, error)
 
 	// Prepare
-	VisitPrepare(op *Prepare) (interface{}, error)
+	//VisitPrepare(op *Prepare) (interface{}, error)
 
 	// Infer
-	VisitInferKeyspace(op *InferKeyspace) (interface{}, error)
+	//VisitInferKeyspace(op *InferKeyspace) (interface{}, error)
 }

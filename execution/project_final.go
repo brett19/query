@@ -38,12 +38,12 @@ func (this *FinalProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *FinalProject) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *FinalProject) Item(item value.AnnotatedValue, context *Context) bool {
 	pv := item.GetAttachment("projection")
 	if pv != nil {
 		v := pv.(value.Value)
-		return this.sendItem(value.NewAnnotatedValue(v))
+		return this.sendItem(value.NewAnnotatedValue(v), context)
 	}
 
-	return this.sendItem(item)
+	return this.sendItem(item, context)
 }

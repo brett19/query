@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"sync"
 	go_atomic "sync/atomic"
-	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
@@ -21,16 +20,10 @@ import (
 )
 
 type base struct {
-	itemChannel value.AnnotatedChannel
-	stopChannel StopChannel // Never closed
 	input       Operator
 	output      Operator
-	stop        Operator
-	parent      Parent
 	once        sync.Once
 	batch       []value.AnnotatedValue
-	duration    time.Duration
-	chanTime    time.Duration
 }
 
 const _ITEM_CAP = 512
@@ -56,8 +49,6 @@ func GetPipelineCap() int64 {
 
 func newBase() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, GetPipelineCap()),
-		stopChannel: make(StopChannel, 1),
 	}
 }
 
@@ -65,17 +56,7 @@ func newBase() base {
 // allocate a minimal itemChannel.
 func newRedirectBase() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel),
-		stopChannel: make(StopChannel, 1),
 	}
-}
-
-func (this *base) ItemChannel() value.AnnotatedChannel {
-	return this.itemChannel
-}
-
-func (this *base) StopChannel() StopChannel {
-	return this.stopChannel
 }
 
 func (this *base) Input() Operator {
@@ -94,147 +75,52 @@ func (this *base) SetOutput(op Operator) {
 	this.output = op
 }
 
-func (this *base) Stop() Operator {
-	return this.stop
-}
-
-func (this *base) SetStop(op Operator) {
-	this.stop = op
-}
-
-func (this *base) Parent() Parent {
-	return this.parent
-}
-
-func (this *base) SetParent(parent Parent) {
-	this.parent = parent
+func (this *base) Item(item value.AnnotatedValue, context *Context) bool {
+	panic("item lost due to unimplemented handler")
+	return true
 }
 
 func (this *base) copy() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, GetPipelineCap()),
-		stopChannel: make(StopChannel, 1),
 		input:       this.input,
 		output:      this.output,
-		parent:      this.parent,
 	}
 }
 
-func (this *base) sendItem(item value.AnnotatedValue) bool {
-	t := time.Now()
-	addTime := func() {
-		this.chanTime += time.Since(t)
-	}
-	defer addTime()
-
-	select {
-	case <-this.stopChannel: // Never closed
-		return false
-	default:
-	}
-
-	select {
-	case this.output.ItemChannel() <- item:
-		return true
-	case <-this.stopChannel: // Never closed
-		return false
-	}
+func (this *base) sendItem(item value.AnnotatedValue, context *Context) bool {
+	this.output.Item(item, context)
+	return true
 }
 
 type consumer interface {
-	beforeItems(context *Context, parent value.Value) bool
-	processItem(item value.AnnotatedValue, context *Context) bool
-	afterItems(context *Context)
-	readonly() bool
+	Readonly() bool
+	BeforeItems(context *Context, parent value.Value) bool
+	AfterItems(context *Context)
+}
+
+func (this *base) Readonly() bool {
+	return true
+}
+
+func (this *base) BeforeItems(context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *base) AfterItems(context *Context) {
 }
 
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
-	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
-		defer func() { this.batch = nil }()
-
-		if context.Readonly() && !cons.readonly() {
-			return
-		}
-
-		ok := cons.beforeItems(context, parent)
-
-		if ok {
-			go this.input.RunOnce(context, parent)
-		}
-
-		var item value.AnnotatedValue
-	loop:
-		for ok {
-			t := time.Now()
-			select {
-			case <-this.stopChannel: // Never closed
-				this.chanTime += time.Since(t)
-				break loop
-			default:
-			}
-
-			select {
-			case item, ok = <-this.input.ItemChannel():
-				if ok {
-					ok = cons.processItem(item, context)
-				}
-			case <-this.stopChannel: // Never closed
-				this.chanTime += time.Since(t)
-				break loop
-			}
-			this.chanTime += time.Since(t)
-		}
-
-		this.notifyStop()
-		cons.afterItems(context)
-	})
-}
-
-// Override if needed
-func (this *base) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
-// Override if needed
-func (this *base) afterItems(context *Context) {
-}
-
-// Override if needed
-func (this *base) readonly() bool {
-	return true
-}
-
-// Unblock all dependencies.
-func (this *base) notify() {
-	this.notifyParent()
-	this.notifyStop()
-}
-
-// Notify parent, if any.
-func (this *base) notifyParent() {
-	parent := this.parent
-	if parent != nil {
-		// Block on parent
-		parent.ChildChannel() <- false
-		this.parent = nil
+	if context.Readonly() && !cons.Readonly() {
+		return
 	}
-}
 
-// Notify upstream to stop.
-func (this *base) notifyStop() {
-	stop := this.stop
-	if stop != nil {
-		select {
-		case stop.StopChannel() <- false:
-		default:
-			// Already notified.
-		}
+	ok := cons.BeforeItems(context, parent)
 
-		this.stop = nil
+	if ok {
+		this.input.RunOnce(context, parent)
 	}
+
+	cons.AfterItems(context)
 }
 
 type batcher interface {

@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
+	"fmt"
 )
 
 type Filter struct {
@@ -42,7 +43,7 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Filter) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *Filter) Item(item value.AnnotatedValue, context *Context) bool {
 	val, e := this.plan.Condition().Evaluate(item, context)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "filter"))
@@ -50,8 +51,9 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	if val.Truth() {
-		return this.sendItem(item)
+		return this.sendItem(item, context)
 	} else {
+		fmt.Printf("Filtering Item %+v %+v\n", this.plan.Condition(), item)
 		return true
 	}
 }

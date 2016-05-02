@@ -15,13 +15,15 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+	"fmt"
 )
 
 type Parallel struct {
 	base
 	plan         *plan.Parallel
 	child        Operator
-	childChannel StopChannel
+	inChannel    chan value.AnnotatedValue
+	outChannel   chan value.AnnotatedValue
 }
 
 func NewParallel(plan *plan.Parallel, child Operator) *Parallel {
@@ -29,7 +31,8 @@ func NewParallel(plan *plan.Parallel, child Operator) *Parallel {
 		base:         newBase(),
 		plan:         plan,
 		child:        child,
-		childChannel: make(StopChannel, runtime.NumCPU()),
+		inChannel:    make(chan value.AnnotatedValue, 40),
+		outChannel:   make(chan value.AnnotatedValue, 40),
 	}
 
 	rv.output = rv
@@ -45,51 +48,102 @@ func (this *Parallel) Copy() Operator {
 		base:         this.base.copy(),
 		plan:         this.plan,
 		child:        this.child.Copy(),
-		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
 }
 
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
-	this.once.Do(func() {
-		defer context.Recover()       // Recover from any panic
-		defer close(this.itemChannel) // Broadcast that I have stopped
-		defer this.notify()           // Notify that I have stopped
+	n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
+	children := make([]*parallelChild, n)
 
-		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
-		children := _PARALLEL_POOL.Get()[0:n]
-		defer _PARALLEL_POOL.Put(children)
+	doneCh := make(chan bool)
 
-		for i := 1; i < n; i++ {
-			children[i] = this.child.Copy()
-			go this.runChild(children[i], context, parent)
+	children[0] = newParallelChild(this, this.outChannel)
+	for i := 1; i < n; i++ {
+		children[i] = children[0].Copy().(*parallelChild)
+	}
+
+	for i := 0; i < n; i++ {
+		i := i
+		go func() {
+			children[i].Start(context, parent)
+			doneCh <- true
+		}()
+	}
+
+	go func() {
+		this.input.RunOnce(context, parent)
+		close(this.inChannel)
+
+		for i := 0; i < n; i++ {
+			<- doneCh
 		}
+		close(this.outChannel)
+	}()
 
-		children[0] = this.child
-		go this.runChild(children[0], context, parent)
-
-		for n > 0 {
-			select {
-			case <-this.childChannel: // Never closed
-				// Wait for all children
-				n--
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(children...)
-			}
+	Loop:
+	for {
+		item, ok := <-this.outChannel
+		if !ok {
+			break Loop
 		}
-	})
+		this.sendItem(item, context)
+	}
 }
 
-func (this *Parallel) ChildChannel() StopChannel {
-	return this.childChannel
+func (this *Parallel) Item(item value.AnnotatedValue, context *Context) bool {
+	this.inChannel <- item
+	return true
 }
 
-func (this *Parallel) runChild(child Operator, context *Context, parent value.Value) {
-	child.SetInput(this.input)
-	child.SetOutput(this.output)
-	child.SetParent(this)
-	child.SetStop(nil)
-	child.RunOnce(context, parent)
+type parallelChild struct {
+	base
+	parent        *Parallel
+	child        Operator
+}
+
+func newParallelChild(parent *Parallel, itemCh chan value.AnnotatedValue) *parallelChild {
+	rv := &parallelChild{
+		base: newBase(),
+		parent: parent,
+		child: parent.child.Copy(),
+	}
+
+	rv.output = parent.output
+	return rv
+}
+
+func (this *parallelChild) Accept(visitor Visitor) (interface{}, error) {
+	panic(fmt.Sprintf("Internal operator parallelChild visited by %v.", visitor))
+}
+
+func (this *parallelChild) Copy() Operator {
+	return &parallelChild{
+		base: this.base.copy(),
+		parent: this.parent,
+		child: this.child.Copy(),
+	}
+}
+
+func (this *parallelChild) Start(context *Context, parent value.Value) {
+	this.child.SetInput(this)
+	this.child.SetOutput(this)
+	this.child.RunOnce(context, parent)
+}
+
+func (this *parallelChild) Item(item value.AnnotatedValue, context *Context) bool {
+	this.parent.outChannel <- item
+	return true
+}
+
+func (this *parallelChild) RunOnce(context *Context, parent value.Value) {
+	// Need to pull items off and send them...
+	for {
+		item, ok := <- this.parent.inChannel
+		if !ok {
+			break
+		}
+		this.child.Item(item, context)
+	}
 }
 
 var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())

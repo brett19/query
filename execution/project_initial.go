@@ -45,7 +45,7 @@ func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 
 var _EMPTY_ANNOTATED_VALUE = value.NewAnnotatedValue(map[string]interface{}{})
 
-func (this *InitialProject) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *InitialProject) Item(item value.AnnotatedValue, context *Context) bool {
 	terms := this.plan.Terms()
 	n := len(terms)
 
@@ -54,7 +54,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	}
 
 	if n == 0 {
-		return this.sendItem(item)
+		return this.sendItem(item, context)
 	}
 
 	// n == 1
@@ -65,9 +65,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	if result.Star() && (expr == expression.SELF || expr == nil) {
 		// Unprefixed star
 		if item.Type() == value.OBJECT {
-			return this.sendItem(item)
+			return this.sendItem(item, context)
 		} else {
-			return this.sendItem(_EMPTY_ANNOTATED_VALUE)
+			return this.sendItem(_EMPTY_ANNOTATED_VALUE, context)
 		}
 	} else if this.plan.Projection().Raw() {
 		// Raw projection of an expression
@@ -78,14 +78,14 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		}
 
 		if result.As() == "" {
-			return this.sendItem(value.NewAnnotatedValue(v))
+			return this.sendItem(value.NewAnnotatedValue(v), context)
 		}
 
 		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
 		sv.SetField(result.As(), v)
 		av := value.NewAnnotatedValue(sv)
 		av.SetAttachment("projection", v)
-		return this.sendItem(av)
+		return this.sendItem(av, context)
 	} else {
 		// Any other projection
 		return this.processTerms(item, context)
@@ -137,5 +137,5 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		}
 	}
 
-	return this.sendItem(pv)
+	return this.sendItem(pv, context)
 }

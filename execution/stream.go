@@ -38,10 +38,10 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *Stream) Item(item value.AnnotatedValue, context *Context) bool {
 	return context.Result(item)
 }
 
-func (this *Stream) afterItems(context *Context) {
+func (this *Stream) AfterItems(context *Context) {
 	context.CloseResults()
 }

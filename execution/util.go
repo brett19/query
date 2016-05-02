@@ -14,24 +14,5 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func notifyChildren(children ...Operator) {
-	for _, child := range children {
-		if child != nil {
-			select {
-			case child.StopChannel() <- false:
-			default:
-			}
-		}
-	}
-}
-
-func copyOperator(op Operator) Operator {
-	if op == nil {
-		return nil
-	} else {
-		return op.Copy()
-	}
-}
-
 var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
 var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)

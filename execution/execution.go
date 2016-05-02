@@ -23,20 +23,23 @@ type StopChannel chan bool
 
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
-	ItemChannel() value.AnnotatedChannel          // Closed by this operator
-	StopChannel() StopChannel                     // Never closed, just garbage-collected
+	//ItemChannel() value.AnnotatedChannel          // Closed by this operator
+	//StopChannel() StopChannel                     // Never closed, just garbage-collected
 	Input() Operator                              // Read by this operator
 	SetInput(op Operator)                         // Can be set
 	Output() Operator                             // Written by this operator
 	SetOutput(op Operator)                        // Can be set
-	Stop() Operator                               // Notified when this operator stops
-	SetStop(op Operator)                          // Can be set
-	Parent() Parent                               // Notified when this operator stops
-	SetParent(parent Parent)                      // Can be set
+	//Stop() Operator                               // Notified when this operator stops
+	//SetStop(op Operator)                          // Can be set
+	//Parent() Parent                               // Notified when this operator stops
+	//SetParent(parent Parent)                      // Can be set
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
+
+	Item(item value.AnnotatedValue, context *Context) bool
 }
 
 type Parent interface {
-	ChildChannel() StopChannel // Never closed, just garbage-collected
+	Item(item value.AnnotatedValue, context *Context) bool
+	//ChildChannel() StopChannel // Never closed, just garbage-collected
 }

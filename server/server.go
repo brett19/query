@@ -430,7 +430,8 @@ func (this *Server) serviceRequest(request Request) {
 		defer timer.Stop()
 	}
 
-	go request.Execute(this, prepared.Signature(), operator.StopChannel())
+	stopCh := make(chan bool, 1)
+	go request.Execute(this, prepared.Signature(), stopCh)
 
 	run := time.Now()
 	operator.RunOnce(context, nil)
