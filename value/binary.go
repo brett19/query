@@ -26,6 +26,11 @@ func (this binaryValue) MarshalJSON() ([]byte, error) {
 	return []byte(this.String()), nil
 }
 
+func (this binaryValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	buf.WriteString(this.String())
+	return nil
+}
+
 func (this binaryValue) Type() Type {
 	return BINARY
 }

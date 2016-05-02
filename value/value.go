@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"reflect"
 
+	djson "github.com/dustin/gojson"
 	"github.com/couchbase/query/util"
-	json "github.com/dustin/gojson"
+	"github.com/couchbase/query/ssjson"
 )
 
 type Tristate int
@@ -168,6 +169,11 @@ type Value interface {
 	   JSON marshaling.
 	*/
 	json.Marshaler
+
+	/*
+		JSON fast marshaling.
+	 */
+	json.FastMarshaler
 
 	/*
 	   Returns the type of the input based on the previously
@@ -399,7 +405,7 @@ func newValueFromBytes(bytes []byte) Value {
 		return binaryValue(bytes)
 	}
 
-	err := json.Validate(bytes)
+	err := djson.Validate(bytes)
 	if err != nil {
 		return binaryValue(bytes)
 	}

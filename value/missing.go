@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/util"
+	"bytes"
 )
 
 /*
@@ -44,6 +45,11 @@ MISSING is marshalled as NULL in JSON arrays.
 */
 func (this missingValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
+}
+
+func (this missingValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	buf.Write(_NULL_BYTES)
+	return nil
 }
 
 /*

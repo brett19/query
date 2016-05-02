@@ -29,8 +29,17 @@ func (this sliceValue) String() string {
 	return marshalString(this)
 }
 
+func (this sliceValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	return marshalArray(buf, this)
+}
+
 func (this sliceValue) MarshalJSON() ([]byte, error) {
-	return marshalArray(this)
+	buf := bytes.NewBuffer(make([]byte, 0, 256))
+	err := marshalArray(buf, this)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 /*
@@ -296,6 +305,10 @@ func (this *listValue) MarshalJSON() ([]byte, error) {
 	return this.slice.MarshalJSON()
 }
 
+func (this *listValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	return this.slice.FastMarshalJSON(buf)
+}
+
 /*
 Type ARRAY.
 */
@@ -466,12 +479,12 @@ func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	return result
 }
 
-func marshalArray(slice []interface{}) (b []byte, err error) {
+func marshalArray(buf *bytes.Buffer, slice []interface{}) error {
 	if slice == nil {
-		return _NULL_BYTES, nil
+		buf.Write(_NULL_BYTES)
+		return nil
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, 256))
 	buf.WriteString("[")
 
 	for i, e := range slice {
@@ -480,14 +493,12 @@ func marshalArray(slice []interface{}) (b []byte, err error) {
 		}
 
 		v := NewValue(e)
-		b, err = v.MarshalJSON()
+		err := v.FastMarshalJSON(buf)
 		if err != nil {
-			return
+			return err
 		}
-
-		buf.Write(b)
 	}
 
 	buf.WriteString("]")
-	return buf.Bytes(), nil
+	return nil
 }

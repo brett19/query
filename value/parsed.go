@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/util"
 	jsonpointer "github.com/dustin/go-jsonpointer"
+	"bytes"
 )
 
 /*
@@ -32,6 +33,10 @@ func (this *parsedValue) String() string {
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
+}
+
+func (this *parsedValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	return this.unwrap().FastMarshalJSON(buf)
 }
 
 func (this *parsedValue) Type() Type {

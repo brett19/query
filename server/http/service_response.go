@@ -11,7 +11,6 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/query/ssjson"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
@@ -179,10 +179,19 @@ func (this *httpRequest) writeResults() bool {
 	return false
 }
 
+var marshalBytePool sync.Pool = sync.Pool{
+	New: func() interface{} {
+		return bytes.NewBuffer(make([]byte, 0, 512))
+	},
+}
+
 func (this *httpRequest) writeResult(item value.Value) bool {
 	var success bool
 
-	bytes, err := json.MarshalIndent(item, "        ", "    ")
+	bytes := marshalBytePool.Get().(*bytes.Buffer)
+	defer marshalBytePool.Put(bytes)
+
+	err := json.FastMarshal(bytes, item)
 	if err != nil {
 		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
 		this.SetState(server.FATAL)
@@ -195,12 +204,12 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 		success = this.writeString(",\n")
 	}
 
-	this.resultSize += len(bytes)
+	this.resultSize += len(bytes.Bytes())
 	this.resultCount++
 
 	if success {
 		success = this.writeString("        ") &&
-			this.writeString(string(bytes))
+			this.writeBytes(bytes.Bytes())
 	}
 	if !success {
 		this.SetState(server.CLOSED)
@@ -209,13 +218,16 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 }
 
 func (this *httpRequest) writeValue(item value.Value) bool {
-	bytes, err := json.MarshalIndent(item, "    ", "    ")
+	bytes := marshalBytePool.Get().(*bytes.Buffer)
+	defer marshalBytePool.Put(bytes)
+
+	err := json.FastMarshal(bytes, item)
 	if err != nil {
 		s := fmt.Sprintf("\"ERROR: %v\"", err)
 		return this.writeString(s)
 	}
 
-	return this.writeString(string(bytes))
+	return this.writeBytes(bytes.Bytes())
 }
 
 func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {
@@ -228,7 +240,11 @@ func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {
 }
 
 func (this *httpRequest) writeString(s string) bool {
-	return this.writer.writeString(s)
+	return this.writeBytes([]byte(s))
+}
+
+func (this *httpRequest) writeBytes(b []byte) bool {
+	return this.writer.writeBytes(b)
 }
 
 func (this *httpRequest) writeState(state server.State) bool {
@@ -363,7 +379,7 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 // responseDataManager is an interface for managing response data. It is used by httpRequest to take care of
 // the data in a response.
 type responseDataManager interface {
-	writeString(string) bool // write the given string for the response
+	writeBytes([]byte) bool  // write the given bytes for the response
 	noMoreData()             // action to take when there is no more data for the response
 }
 
@@ -386,7 +402,7 @@ func NewBufferedWriter(r *httpRequest, bp BufferPool) *bufferedWriter {
 	}
 }
 
-func (this *bufferedWriter) writeString(s string) bool {
+func (this *bufferedWriter) writeBytes(b []byte) bool {
 	this.Lock()
 	defer this.Unlock()
 
@@ -394,7 +410,7 @@ func (this *bufferedWriter) writeString(s string) bool {
 		return false
 	}
 
-	if len(s)+len(this.buffer.Bytes()) > this.buffer_pool.BufferCapacity() { // threshold exceeded
+	if len(b)+len(this.buffer.Bytes()) > this.buffer_pool.BufferCapacity() { // threshold exceeded
 		w := this.req.resp // our request's response writer
 		// write response header and data buffered so far using request's response writer:
 		w.WriteHeader(this.req.httpCode())
@@ -405,10 +421,10 @@ func (this *bufferedWriter) writeString(s string) bool {
 		this.buffer_pool.PutBuffer(this.buffer)
 		this.closed = true
 		// write out the string - using just-created directWriter:
-		return this.req.writer.writeString(s)
+		return this.req.writer.writeBytes(b)
 	}
 	// under threshold - write the string to our buffer
-	_, err := this.buffer.Write([]byte(s))
+	_, err := this.buffer.Write(b)
 	return err == nil
 }
 
@@ -450,7 +466,7 @@ func NewDirectWriter(r *httpRequest) *directWriter {
 }
 
 // write and flush the given string using our request's response writer:
-func (this *directWriter) writeString(s string) bool {
+func (this *directWriter) writeBytes(b []byte) bool {
 	this.Lock()
 	defer this.Unlock()
 
@@ -458,7 +474,7 @@ func (this *directWriter) writeString(s string) bool {
 		return false
 	}
 	w := this.req.resp
-	_, err := io.WriteString(w, s)
+	_, err := w.Write(b)
 	w.(http.Flusher).Flush()
 	return err == nil
 }

@@ -26,12 +26,12 @@ func (this objectValue) String() string {
 	return marshalString(this)
 }
 
-func (this objectValue) MarshalJSON() ([]byte, error) {
+func (this objectValue) FastMarshalJSON(buf *bytes.Buffer) error {
 	if this == nil {
-		return _NULL_BYTES, nil
+		buf.Write(_NULL_BYTES)
+		return nil
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, 256))
 	buf.WriteString("{")
 
 	names := _NAME_POOL.GetSized(len(this))
@@ -50,7 +50,7 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 
 		b, err := json.Marshal(n)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		buf.Write(b)
@@ -58,13 +58,28 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 
 		b, err = v.MarshalJSON()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		buf.Write(b)
 	}
 
 	buf.WriteString("}")
+	return nil
+}
+
+func (this objectValue) MarshalJSON() ([]byte, error) {
+	if this == nil {
+		return _NULL_BYTES, nil
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, 256))
+
+	err := this.FastMarshalJSON(buf)
+	if err != nil {
+		return nil, err
+	}
+
 	return buf.Bytes(), nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"math"
 
 	"github.com/couchbase/query/util"
+	"bytes"
 )
 
 /*
@@ -50,6 +51,15 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 	} else {
 		return _FALSE_BYTES, nil
 	}
+}
+
+func (this boolValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	if this {
+		buf.Write(_TRUE_BYTES)
+	} else {
+		buf.Write(_FALSE_BYTES)
+	}
+	return nil
 }
 
 /*

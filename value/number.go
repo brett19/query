@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/couchbase/query/util"
+	"bytes"
 )
 
 /*
@@ -55,6 +56,26 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 		s := strconv.FormatFloat(f, 'f', -1, 64)
 		return []byte(s), nil
 	}
+}
+
+func (this floatValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	f := float64(this)
+
+	if math.IsNaN(f) {
+		buf.Write(_NAN_BYTES)
+	} else if math.IsInf(f, 1) {
+		buf.Write(_POS_INF_BYTES)
+	} else if math.IsInf(f, -1) {
+		buf.Write(_NEG_INF_BYTES)
+	} else {
+		if f == -0 {
+			f = 0
+		}
+
+		s := strconv.FormatFloat(f, 'f', -1, 64)
+		buf.WriteString(s)
+	}
+	return nil
 }
 
 /*

@@ -10,10 +10,11 @@
 package value
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/ssjson"
 	"github.com/couchbase/query/util"
+	"bytes"
 )
 
 /*
@@ -46,6 +47,10 @@ characters.
 */
 func (this stringValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(this))
+}
+
+func (this stringValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	return json.FastMarshal(buf, string(this))
 }
 
 /*

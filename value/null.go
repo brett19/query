@@ -11,6 +11,7 @@ package value
 
 import (
 	"github.com/couchbase/query/util"
+	"bytes"
 )
 
 /*
@@ -39,6 +40,11 @@ func (this *nullValue) String() string {
 
 func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
+}
+
+func (this *nullValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	buf.Write(_NULL_BYTES)
+	return nil
 }
 
 /*
