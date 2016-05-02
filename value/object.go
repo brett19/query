@@ -11,9 +11,9 @@ package value
 
 import (
 	"bytes"
-	"encoding/json"
 	"sort"
 
+	"github.com/couchbase/query/ssjson"
 	"github.com/couchbase/query/util"
 )
 
@@ -48,20 +48,17 @@ func (this objectValue) FastMarshalJSON(buf *bytes.Buffer) error {
 			buf.WriteString(",")
 		}
 
-		b, err := json.Marshal(n)
+		err := json.FastMarshal(buf, n)
 		if err != nil {
 			return err
 		}
 
-		buf.Write(b)
 		buf.WriteString(":")
 
-		b, err = v.MarshalJSON()
+		err = v.FastMarshalJSON(buf)
 		if err != nil {
 			return err
 		}
-
-		buf.Write(b)
 	}
 
 	buf.WriteString("}")
