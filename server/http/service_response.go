@@ -189,6 +189,7 @@ func marshalBytePoolGet() *bytes.Buffer {
 	}
 }
 func marshalBytePoolPut(buf *bytes.Buffer) {
+	buf.Reset()
 	select {
 	case marshalBytesPool <- buf:
 	default:
