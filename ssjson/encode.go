@@ -146,6 +146,7 @@ func FastMarshal(b *bytes.Buffer, v interface{}) error {
 		return err
 	}
 	b.Write(e.Bytes())
+	encodeStatePool.Put(e)
 	return nil
 }
 

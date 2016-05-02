@@ -179,21 +179,17 @@ func (this *httpRequest) writeResults() bool {
 	return false
 }
 
-var marshalBytesPool chan *bytes.Buffer = make(chan *bytes.Buffer, 4096)
-func marshalBytePoolGet() *bytes.Buffer {
-	select {
-	case item := <- marshalBytesPool:
-		return item
-	default:
+var marshalBytesPool sync.Pool = sync.Pool{
+	New: func() interface{} {
 		return bytes.NewBuffer(make([]byte, 0, 512))
-	}
+	},
+}
+func marshalBytePoolGet() *bytes.Buffer {
+	return marshalBytesPool.Get().(*bytes.Buffer)
 }
 func marshalBytePoolPut(buf *bytes.Buffer) {
 	buf.Reset()
-	select {
-	case marshalBytesPool <- buf:
-	default:
-	}
+	marshalBytesPool.Put(buf)
 }
 
 func (this *httpRequest) writeResult(item value.Value) bool {
