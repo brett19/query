@@ -26,6 +26,13 @@ func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 	}
 }
 
+func NewScopedFlatObject(len int, parent Value) *ScopeValue {
+	return &ScopeValue{
+		Value:  NewFlatObject(len),
+		parent: parent,
+	}
+}
+
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
 }

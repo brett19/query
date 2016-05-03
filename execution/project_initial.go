@@ -94,11 +94,11 @@ func (this *InitialProject) Item(item value.AnnotatedValue, context *Context) bo
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
-	sv := value.NewScopeValue(make(map[string]interface{}, n), item)
+	sv := value.NewScopedFlatObject(n, item)
 	pv := value.NewAnnotatedValue(sv)
 	pv.SetAnnotations(item)
 
-	p := value.NewValue(make(map[string]interface{}, n+32))
+	p := value.NewFlatObject(n+32)
 	pv.SetAttachment("projection", p)
 
 	for _, term := range this.plan.Terms() {
