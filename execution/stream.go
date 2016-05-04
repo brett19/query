@@ -39,7 +39,9 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Stream) Item(item value.AnnotatedValue, context *Context) bool {
-	return context.Result(item)
+	r := context.Result(item)
+	_VALUEPOOL.Release(item)
+	return r
 }
 
 func (this *Stream) AfterItems(context *Context) {

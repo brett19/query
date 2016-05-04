@@ -19,6 +19,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+var _VALUEPOOL value.Pool
+
 type StopChannel chan bool
 
 type Operator interface {

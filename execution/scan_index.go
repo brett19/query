@@ -147,11 +147,13 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		select {
 		case entry, ok = <-conn.EntryChannel():
 			if ok {
-				cv := value.NewScopeValue(make(map[string]interface{}), parent)
-				av := value.NewAnnotatedValue(cv)
+				x := _VALUEPOOL.NewFlatObjectValue(4)
+				cv := _VALUEPOOL.NewScopeValue(x, parent)
+				av := _VALUEPOOL.NewAnnotatedValue(cv)
 
 				// For downstream Fetch
-				meta := map[string]interface{}{"id": entry.PrimaryKey}
+				meta := _VALUEPOOL.NewFlatObjectValue(1)
+				meta.SetField("id", entry.PrimaryKey)
 				av.SetAttachment("meta", meta)
 
 				covers := this.plan.Covers()

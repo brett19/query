@@ -14,16 +14,16 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+type flatPair struct {
+	key   string
+	value Value
+}
+
 func NewFlatObject(len int) Value {
 	return &flatObject{
 		items: make([]flatPair, 0, len),
 		parsed: nil,
 	}
-}
-
-type flatPair struct {
-	key   string
-	value Value
 }
 
 type flatObject struct {
@@ -76,6 +76,9 @@ func (this *flatObject) CopyForUpdate() Value {
 }
 
 func (this *flatObject) Field(field string) (Value, bool) {
+	if this.parsed != nil {
+		return this.parsed.Field(field)
+	}
 	for _, v := range this.items {
 		if v.key == field {
 			return v.value, true
@@ -85,6 +88,9 @@ func (this *flatObject) Field(field string) (Value, bool) {
 }
 
 func (this *flatObject) SetField(field string, val interface{}) error {
+	if this.parsed != nil {
+		return this.parsed.SetField(field, val)
+	}
 	for _, v := range this.items {
 		if v.key == field {
 			v.value = NewValue(val)
@@ -96,6 +102,9 @@ func (this *flatObject) SetField(field string, val interface{}) error {
 }
 
 func (this *flatObject) UnsetField(field string) error {
+	if this.parsed != nil {
+		return this.parsed.UnsetField(field)
+	}
 	for i, v := range this.items {
 		if v.key == field {
 			copy(this.items[i:], this.items[i+1:])
@@ -130,6 +139,9 @@ func (this *flatObject) Fields() map[string]interface{} {
 }
 
 func (this *flatObject) FieldNames(buffer []string) []string {
+	if this.parsed != nil {
+		return this.parsed.FieldNames(buffer)
+	}
 	for i, k := range this.items {
 		buffer[i] = k.key
 	}

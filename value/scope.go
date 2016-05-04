@@ -19,16 +19,9 @@ type ScopeValue struct {
 	parent Value
 }
 
-func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
+func NewScopeValue(val interface{}, parent Value) *ScopeValue {
 	return &ScopeValue{
-		Value:  objectValue(val),
-		parent: parent,
-	}
-}
-
-func NewScopedFlatObject(len int, parent Value) *ScopeValue {
-	return &ScopeValue{
-		Value:  NewFlatObject(len),
+		Value:  NewValue(val),
 		parent: parent,
 	}
 }
