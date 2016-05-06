@@ -52,19 +52,19 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 
 	for i := 0; i < n; i++ {
 		curr := this.children[i]
+		curr.SetInput(input)
 		if input != nil {
 			input.SetOutput(curr)
 		}
-		curr.SetInput(input)
 		input = curr
 	}
 
-	input.SetOutput(this)
+	input.SetOutput(this.output)
 	input.RunOnce(context, parent)
 }
 
 func (this *Sequence) Item(item value.AnnotatedValue, context *Context) bool {
-	return this.output.Item(item, context)
+	return this.children[0].Item(item, context)
 }
 
 var _SEQUENCE_POOL = NewOperatorPool(32)

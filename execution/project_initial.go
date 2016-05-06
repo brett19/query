@@ -95,9 +95,9 @@ func (this *InitialProject) Item(item value.AnnotatedValue, context *Context) bo
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
 	x := _VALUEPOOL.NewFlatObjectValue(n)
-	sv := _VALUEPOOL.NewScopeValue(x, item)
-	pv := _VALUEPOOL.NewAnnotatedValue(sv)
-	pv.SetAnnotations(item)
+	pv := _VALUEPOOL.NewAnnotatedScopeValue(x, item)
+	//pv := _VALUEPOOL.NewAnnotatedValue(sv)
+	//pv.SetAnnotations(item)
 
 	p := _VALUEPOOL.NewFlatObjectValue(n + 32)
 	pv.SetAttachment("projection", p)

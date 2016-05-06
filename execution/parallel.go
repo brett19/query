@@ -57,7 +57,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 	doneCh := make(chan bool)
 
-	children[0] = newParallelChild(this, this.outChannel)
+	children[0] = newParallelChild(this)
 	for i := 1; i < n; i++ {
 		children[i] = children[0].Copy().(*parallelChild)
 	}
@@ -97,11 +97,11 @@ func (this *Parallel) Item(item value.AnnotatedValue, context *Context) bool {
 
 type parallelChild struct {
 	base
-	parent        *Parallel
+	parent       *Parallel
 	child        Operator
 }
 
-func newParallelChild(parent *Parallel, itemCh chan value.AnnotatedValue) *parallelChild {
+func newParallelChild(parent *Parallel) *parallelChild {
 	rv := &parallelChild{
 		base: newBase(),
 		parent: parent,
@@ -120,7 +120,7 @@ func (this *parallelChild) Copy() Operator {
 	return &parallelChild{
 		base: this.base.copy(),
 		parent: this.parent,
-		child: this.child.Copy(),
+		child: this.parent.child.Copy(),
 	}
 }
 

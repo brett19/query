@@ -70,7 +70,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		go func() {
 			execSpan := newSpanScan(this, span)
 			execSpan.SetOutput(this)
-			execSpan.RunOnce(context, parent)
+			execSpan.Start(context, parent)
 			doneCh <- true
 		}()
 	}
@@ -125,6 +125,10 @@ func (this *spanScan) Copy() Operator {
 }
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
+	panic("spanScan RunOnce called...")
+}
+
+func (this *spanScan) Start(context *Context, parent value.Value) {
 	defer context.Recover()
 
 	conn := datastore.NewIndexConnection(context)
@@ -148,8 +152,8 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		case entry, ok = <-conn.EntryChannel():
 			if ok {
 				x := _VALUEPOOL.NewFlatObjectValue(4)
-				cv := _VALUEPOOL.NewScopeValue(x, parent)
-				av := _VALUEPOOL.NewAnnotatedValue(cv)
+				av := _VALUEPOOL.NewAnnotatedScopeValue(x, parent)
+				//av := _VALUEPOOL.NewAnnotatedValue(cv)
 
 				// For downstream Fetch
 				meta := _VALUEPOOL.NewFlatObjectValue(1)

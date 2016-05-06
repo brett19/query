@@ -9,15 +9,14 @@ type Pool struct {
 	objectValuePool sync.Pool
 	annotatedValuePool sync.Pool
 	scopeValuePool sync.Pool
+	annotatedScopeValuePool sync.Pool
 }
 
 func (p *Pool) NewFlatObjectValue(initialSize int) *flatObject {
 	pv := p.flatObjectValuePool.Get()
 	var v *flatObject
 	if pv == nil {
-		v = &flatObject{
-			items: make([]flatPair, 0, initialSize),
-		}
+		v = &flatObject{}
 	} else {
 		v = pv.(*flatObject)
 	}
@@ -25,7 +24,7 @@ func (p *Pool) NewFlatObjectValue(initialSize int) *flatObject {
 }
 
 func (p *Pool) ReleaseFlatObjectValue(val *flatObject) {
-	val.items = val.items[:0]
+	val.items.Clear()
 	val.parsed = nil
 	p.flatObjectValuePool.Put(val)
 }
@@ -107,6 +106,28 @@ func (p *Pool) ReleaseScopeValue(val *ScopeValue) {
 	p.scopeValuePool.Put(val)
 }
 
+func (p *Pool) NewAnnotatedScopeValue(val Value, parent Value) *annotatedScopeValue {
+	pv := p.annotatedScopeValuePool.Get()
+	var v *annotatedScopeValue
+	if pv == nil {
+		v = &annotatedScopeValue{}
+	} else {
+		v = pv.(*annotatedScopeValue)
+	}
+
+	v.Value = val
+	v.parent = p.NewAnnotatedValue(parent)
+	return v
+}
+
+func (p *Pool) ReleaseAnnotatedScopeValue(val *annotatedScopeValue) {
+	p.Release(val.Value)
+	p.Release(val.parent)
+	val.Value = nil
+	val.parent = nil
+	p.annotatedScopeValuePool.Put(val)
+}
+
 func (p *Pool) Release(item interface{}) {
 	if item == nil {
 		return
@@ -118,6 +139,8 @@ func (p *Pool) Release(item interface{}) {
 		p.ReleaseObjectValue(v)
 	case *annotatedValue:
 		p.ReleaseAnnotatedValue(v)
+	case *annotatedScopeValue:
+		p.ReleaseAnnotatedScopeValue(v)
 	case *ScopeValue:
 		p.ReleaseScopeValue(v)
 	}

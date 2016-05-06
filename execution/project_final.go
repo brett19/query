@@ -41,6 +41,9 @@ func (this *FinalProject) RunOnce(context *Context, parent value.Value) {
 func (this *FinalProject) Item(item value.AnnotatedValue, context *Context) bool {
 	pv := item.GetAttachment("projection")
 	if pv != nil {
+		item.SetAttachment("projection", nil)
+		_VALUEPOOL.Release(item)
+
 		v := pv.(value.Value)
 		return this.sendItem(value.NewAnnotatedValue(v), context)
 	}

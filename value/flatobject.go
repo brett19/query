@@ -12,22 +12,63 @@ package value
 import (
 	"bytes"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/ssjson"
 )
 
 type flatPair struct {
 	key   string
-	value Value
+	value interface{}
 }
 
-func NewFlatObject(len int) Value {
-	return &flatObject{
-		items: make([]flatPair, 0, len),
-		parsed: nil,
+type flatMap struct {
+	items []flatPair
+}
+
+func (this *flatMap) Clear() {
+	this.items = this.items[:0]
+}
+
+func (this *flatMap) Get(key string) interface{} {
+	for _, k := range this.items {
+		if k.key == key {
+			return k.value
+		}
+	}
+	return nil
+}
+
+func (this *flatMap) Set(key string, val interface{}) {
+	for _, k := range this.items {
+		if k.key == key {
+			k.value = val
+			return
+		}
+	}
+	this.items = append(this.items, flatPair{
+		key: key,
+		value: val,
+	})
+}
+
+func (this *flatMap) Unset(key string) {
+	for i, v := range this.items {
+		if v.key == key {
+			copy(this.items[i:], this.items[i+1:])
+			return
+		}
 	}
 }
 
+func (this *flatMap) Items() []flatPair {
+	return this.items
+}
+
+func NewFlatObject(len int) Value {
+	return &flatObject{}
+}
+
 type flatObject struct {
-	items      []flatPair
+	items      flatMap
 	parsed     Value
 }
 
@@ -36,11 +77,32 @@ func (this *flatObject) String() string {
 }
 
 func (this *flatObject) MarshalJSON() ([]byte, error) {
-	return this.unwrap().MarshalJSON()
+	if this.parsed != nil {
+		return this.parsed.MarshalJSON()
+	}
+	var buf bytes.Buffer
+	err := this.FastMarshalJSON(&buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (this *flatObject) FastMarshalJSON(buf *bytes.Buffer) error {
-	return this.unwrap().FastMarshalJSON(buf)
+	if this.parsed != nil {
+		return this.parsed.FastMarshalJSON(buf)
+	}
+	buf.Write([]byte("{"))
+	for i, v := range this.items.Items() {
+		if i > 0 {
+			buf.Write([]byte(","))
+		}
+		json.FastMarshal(buf, v.key)
+		buf.Write([]byte(":"))
+		json.FastMarshal(buf, v.value)
+	}
+	buf.Write([]byte("}"))
+	return nil
 }
 
 func (this *flatObject) Type() Type {
@@ -79,9 +141,9 @@ func (this *flatObject) Field(field string) (Value, bool) {
 	if this.parsed != nil {
 		return this.parsed.Field(field)
 	}
-	for _, v := range this.items {
+	for _, v := range this.items.Items() {
 		if v.key == field {
-			return v.value, true
+			return v.value.(Value), true
 		}
 	}
 	return missingField(field), false
@@ -91,13 +153,7 @@ func (this *flatObject) SetField(field string, val interface{}) error {
 	if this.parsed != nil {
 		return this.parsed.SetField(field, val)
 	}
-	for _, v := range this.items {
-		if v.key == field {
-			v.value = NewValue(val)
-			return nil
-		}
-	}
-	this.items = append(this.items, flatPair{field, NewValue(val)})
+	this.items.Set(field, val)
 	return nil
 }
 
@@ -105,12 +161,7 @@ func (this *flatObject) UnsetField(field string) error {
 	if this.parsed != nil {
 		return this.parsed.UnsetField(field)
 	}
-	for i, v := range this.items {
-		if v.key == field {
-			copy(this.items[i:], this.items[i+1:])
-			return nil
-		}
-	}
+	this.items.Unset(field)
 	return nil
 }
 
@@ -142,7 +193,7 @@ func (this *flatObject) FieldNames(buffer []string) []string {
 	if this.parsed != nil {
 		return this.parsed.FieldNames(buffer)
 	}
-	for i, k := range this.items {
+	for i, k := range this.items.Items() {
 		buffer[i] = k.key
 	}
 	return buffer
@@ -158,8 +209,8 @@ func (this *flatObject) Successor() Value {
 
 func (this *flatObject) unwrap() Value {
 	if this.parsed == nil {
-		parsed := make(map[string]interface{}, len(this.items))
-		for _, k := range this.items {
+		parsed := make(map[string]interface{}, len(this.items.Items()))
+		for _, k := range this.items.Items() {
 			parsed[k.key] = k.value
 		}
 		this.parsed = NewValue(parsed)

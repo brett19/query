@@ -55,7 +55,7 @@ func (this objectValue) FastMarshalJSON(buf *bytes.Buffer) error {
 
 		buf.WriteString(":")
 
-		err = v.FastMarshalJSON(buf)
+		err = json.FastMarshal(buf, v)
 		if err != nil {
 			return err
 		}

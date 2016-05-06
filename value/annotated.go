@@ -9,6 +9,10 @@
 
 package value
 
+import (
+	"bytes"
+)
+
 type AnnotatedChannel chan AnnotatedValue
 type AnnotatedValues []AnnotatedValue
 
@@ -37,7 +41,6 @@ type AnnotatedValue interface {
 	Covers() map[string]Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
-	SetAnnotations(av AnnotatedValue)
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -66,6 +69,10 @@ func (this *annotatedValue) String() string {
 
 func (this *annotatedValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
+}
+
+func (this *annotatedValue) FastMarshalJSON(buf *bytes.Buffer) error {
+	return this.Value.FastMarshalJSON(buf)
 }
 
 func (this *annotatedValue) Copy() Value {
@@ -108,12 +115,6 @@ func (this *annotatedValue) SetAttachment(key string, val interface{}) {
 	this.attachments[key] = val
 }
 
-func (this *annotatedValue) RemoveAttachment(key string) {
-	if this.attachments != nil {
-		delete(this.attachments, key)
-	}
-}
-
 func (this *annotatedValue) Covers() map[string]Value {
 	return this.covers
 }
@@ -132,9 +133,4 @@ func (this *annotatedValue) SetCover(key string, val Value) {
 	}
 
 	this.covers[key] = val
-}
-
-func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {
-	this.attachments = av.Attachments()
-	this.covers = av.Covers()
 }
